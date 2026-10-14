@@ -1,0 +1,49 @@
+name: ikeap-platform
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?required}
+      MYSQL_DATABASE: ikeap_platform
+      MYSQL_USER: ikeap
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?required}
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    ports: ["127.0.0.1:3307:3306"]
+    volumes: ["mysql_data:/var/lib/mysql"]
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 25
+  backend:
+    build: ../backend
+    environment:
+      DATABASE_URL: mysql+pymysql://ikeap:${MYSQL_PASSWORD}@mysql:3306/ikeap_platform?charset=utf8mb4
+      SECRET_KEY: ${SECRET_KEY:?required}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?required}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      CORS_ORIGINS: http://localhost:8080,http://127.0.0.1:8080
+      APP_PUBLIC_URL: http://localhost:8080
+      MODEL_BASE_URL: ${MODEL_BASE_URL:-}
+      MODEL_API_KEY: ${MODEL_API_KEY:-}
+      MODEL_NAME: ${MODEL_NAME:-}
+      CAM_SERVICE_URL: ${CAM_SERVICE_URL:-}
+      CAM_SERVICE_TOKEN: ${CAM_SERVICE_TOKEN:-}
+    volumes: ["file_data:/app/storage"]
+    ports: ["127.0.0.1:8001:8000"]
+    depends_on:
+      mysql: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+  frontend:
+    build: ../frontend
+    ports: ["127.0.0.1:8080:80"]
+    depends_on:
+      backend: {condition: service_healthy}
+volumes:
+  mysql_data:
+  file_data:

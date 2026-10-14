@@ -1,0 +1,15 @@
+.env
+.env.test
+.env.*
+!.env.example
+.venv/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.db
+*.log
+work/
+backend/storage/
